@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PKG_VERSION="5.6.1"
-SDK_VERSION="5.0"
+SDK_VERSION="5.1"
 
 #############
 
@@ -12,7 +12,6 @@ URL_BASE="http://www.cryptopp.com"
 DOWNLOAD_URL=${URL_BASE}/${ARCHIVE_NAME}
 
 WORK_PATH=`cd $(dirname $0) && cd .. && pwd`
-#echo ${WORK_PATH}
 
 ARCHS="i386 armv6 armv7"
 
@@ -24,7 +23,7 @@ mkdir -p ${WORK_PATH}/objs
 pushd ${WORK_PATH}/tmp > /dev/null
 if [ ! -e ${ARCHIVE_NAME} ]; then
 	echo "Downloading ${ARCHIVE_NAME}"
-    curl -O ${DOWNLOAD_URL}
+	curl -O ${DOWNLOAD_URL}
 else
 	echo "Using ${ARCHIVE_NAME}"
 fi
@@ -42,13 +41,17 @@ do
 	else
 		PLATFORM="iPhoneOS"
 	fi
-	export DEV_ROOT="/Developer/Platforms/${PLATFORM}.platform/Developer"
+	export DEV_ROOT="/Applications/Xcode.app/Contents/Developer/Platforms/${PLATFORM}.platform/Developer"
 	export SDK_ROOT="${DEV_ROOT}/SDKs/${PLATFORM}${SDK_VERSION}.sdk"
-    BUILD_PATH="${WORK_PATH}/objs/${PLATFORM}${SDK_VERSION}-${ARCH}.sdk"
+	BUILD_PATH="${WORK_PATH}/objs/${PLATFORM}${SDK_VERSION}-${ARCH}.sdk"
 
 	export CC="${DEV_ROOT}/usr/bin/gcc -arch ${ARCH}"
 	export LD=${DEV_ROOT}/usr/bin/ld
-	export CXX=${DEV_ROOT}/usr/bin/clang
+        if [ "${ARCH}" == "i386" ]; then
+		export CXX=${DEV_ROOT}/usr/bin/g++
+        else
+		export CXX=${DEV_ROOT}/usr/bin/clang
+	fi
 	export AR=${DEV_ROOT}/usr/bin/ar
 	export AS=${DEV_ROOT}/usr/bin/as
 	export NM=${DEV_ROOT}/usr/bin/nm
@@ -66,12 +69,13 @@ do
 	mv *.h ${WORK_PATH}/include/${PKG_NAME}
 
 	LOG="${BUILD_PATH}/build-${PKG_NAME}-${PKG_VERSION}.log"
+	echo "Follow build log with: tail -f ${LOG}"
 
 	pushd ${BUILD_PATH} > /dev/null
 	make -f ${WORK_PATH}/scripts/Makefile >> "${LOG}" 2>&1
 	popd > /dev/null
 done
 
-echo "Creating universal  library..."
+echo "Creating universal library..."
 lipo -create ${WORK_PATH}/objs/iPhoneSimulator${SDK_VERSION}-i386.sdk/${LIB_NAME} ${WORK_PATH}/objs/iPhoneOS${SDK_VERSION}-armv6.sdk/${LIB_NAME} ${WORK_PATH}/objs/iPhoneOS${SDK_VERSION}-armv7.sdk/${LIB_NAME} -output ${WORK_PATH}/lib/${LIB_NAME}
 echo "Build ${LIB_NAME} done."
